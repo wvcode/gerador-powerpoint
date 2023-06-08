@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-from io import BytesIO
 import json
+import os
+import shutil
+from io import BytesIO
+
+import openai
+import requests
+import typer
+from dotenv import load_dotenv
+from langchain import OpenAI
 from llama_index import (
     GPTVectorStoreIndex,
-    SimpleDirectoryReader,
     LLMPredictor,
     PromptHelper,
     ServiceContext,
+    SimpleDirectoryReader,
 )
-from langchain import OpenAI
 from pptx import Presentation
 from pptx.util import Inches
-from dotenv import load_dotenv
-
-import os
-import shutil
-import requests
-import typer
-import openai
 
 app = typer.Typer()
 
@@ -137,26 +137,32 @@ def generate_script_pptx(
             new_filename = os.path.split(item)[1]
             shutil.copy2(item, os.path.join(index_folder, new_filename))
 
-            qe = create_query_engine(index_folder)
+            if not os.path.exists(
+                os.path.join(output_folder, new_filename.replace(".pdf", ".json"))
+            ):
+                qe = create_query_engine(index_folder)
 
-            comando = """Transforme o conteúdo deste documento em um conjunto de 10 slides
-            formatados em um array de objetos json. Cada slide deve ser um elemento do array, com os seguintes campos: 
-            title que é o titulo do slide, content que conterá o conteúdo do slide e image, que conterá uma expressão que sumarize o conteúdo do slide, no máximo em 5 palavras.
-            O texto deve ser reescrito utilizando um tom técnico."""
+                comando = """Transforme o conteúdo deste documento em um conjunto de 10 slides
+              formatados em um array de objetos json. Cada slide deve ser um elemento do array, com os seguintes campos: 
+              title que é o titulo do slide, content que conterá o conteúdo do slide e image, que conterá uma expressão que sumarize o conteúdo do slide, no máximo em 5 palavras.
+              O texto deve ser reescrito utilizando um tom técnico."""
 
-            response = qe.query(comando)
+                response = qe.query(comando)
 
-            with open(
-                os.path.join(output_folder, new_filename.replace(".pdf", ".json")),
-                "w",
-                encoding="utf8",
-            ) as fw:
-                fw.write(str(response))
+                with open(
+                    os.path.join(output_folder, new_filename.replace(".pdf", ".json")),
+                    "w",
+                    encoding="utf8",
+                ) as fw:
+                    fw.write(str(response))
 
-            create_presentation(
-                os.path.join(output_folder, new_filename.replace(".pdf", ".json")),
-                os.path.join(output_folder, new_filename.replace(".pdf", ".pptx")),
-            )
+            if not os.path.exists(
+                os.path.join(output_folder, new_filename.replace(".pdf", ".pptx"))
+            ):
+                create_presentation(
+                    os.path.join(output_folder, new_filename.replace(".pdf", ".json")),
+                    os.path.join(output_folder, new_filename.replace(".pdf", ".pptx")),
+                )
 
 
 if __name__ == "__main__":
